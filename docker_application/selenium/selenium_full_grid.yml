@@ -1,0 +1,173 @@
+# To execute this docker-compose yml file use `docker-compose -f docker-compose-v3-full-grid.yml up`
+# Add the `-d` flag at the end for detached execution
+# To stop the execution, hit Ctrl+C, and then `docker-compose -f docker-compose-v3-full-grid.yml down`
+version: "3.7"
+services:
+  selenium-event-bus:
+    image: selenium/event-bus:4.5.3-20221024
+    container_name: selenium-event-bus
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "5557:5557"
+    environment:
+      - SE_JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m -XX:MaxDirectMemorySize=256m
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  selenium-sessions:
+    image: selenium/sessions:4.5.3-20221024
+    container_name: selenium-sessions
+    ports:
+      - "5556:5556"
+    depends_on:
+      - selenium-event-bus
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-event-bus
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  selenium-session-queue:
+    image: selenium/session-queue:4.5.3-20221024
+    container_name: selenium-session-queue
+    ports:
+      - "5559:5559"
+    environment:
+      - SE_SESSION_REQUEST_TIMEOUT=180
+      - SE_SESSION_RETRY_INTERVAL=60
+      - SE_JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m -XX:MaxDirectMemorySize=256m
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  selenium-distributor:
+    image: selenium/distributor:4.5.3-20221024
+    container_name: selenium-distributor
+    ports:
+      - "5553:5553"
+    depends_on:
+      - selenium-event-bus
+      - selenium-sessions
+      - selenium-session-queue
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-event-bus
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_SESSIONS_MAP_HOST=selenium-sessions
+      - SE_SESSIONS_MAP_PORT=5556
+      - SE_SESSION_QUEUE_HOST=selenium-session-queue
+      - SE_SESSION_QUEUE_PORT=5559
+      - SE_JAVA_OPTS=-XX:+UseG1GC -Xmx1024m -Xms512m -XX:MaxDirectMemorySize=256m
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1024M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  selenium-router:
+    image: selenium/router:4.5.3-20221024
+    container_name: selenium-router
+    ports:
+      - "4444:4444"
+    depends_on:
+      - selenium-distributor
+      - selenium-sessions
+      - selenium-session-queue
+    environment:
+      - SE_DISTRIBUTOR_HOST=selenium-distributor
+      - SE_DISTRIBUTOR_PORT=5553
+      - SE_SESSIONS_MAP_HOST=selenium-sessions
+      - SE_SESSIONS_MAP_PORT=5556
+      - SE_SESSION_QUEUE_HOST=selenium-session-queue
+      - SE_SESSION_QUEUE_PORT=5559
+      - SE_SESSION_REQUEST_TIMEOUT=180
+      - SE_SESSION_RETRY_INTERVAL=60
+      - SE_JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m -XX:MaxDirectMemorySize=256m
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  chrome:
+    image: selenium/node-chrome:4.5.3-20221024
+    depends_on:
+      - selenium-event-bus
+    tmpfs:
+      - /tmp:size=4096M
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - type: tmpfs
+        target: /dev/shm
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-event-bus
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_SESSION_TIMEOUT=120
+      - SE_VNC_NO_PASSWORD=1
+      - SE_NODE_MAX_SESSIONS=5
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_JAVA_OPTS=-XX:+UseG1GC -Xmx1024m -Xms512m -XX:MaxDirectMemorySize=256m
+    ports:
+      - "5900:5900"
+    deploy:
+      replicas: 10
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1536M
+        reservations:
+          cpus: '1'
+          memory: 1024M
+
+  edge:
+    image: selenium/node-edge:4.5.3-20221024
+    deploy:
+      replicas: 0
+    depends_on:
+      - selenium-event-bus
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-event-bus
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+  firefox:
+    image: selenium/node-firefox:4.5.3-20221024
+    deploy:
+      replicas: 0
+    depends_on:
+      - selenium-event-bus
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-event-bus
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
