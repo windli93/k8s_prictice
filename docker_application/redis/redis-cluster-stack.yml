@@ -1,0 +1,48 @@
+version: "3.3"
+services:
+
+  redis-master:
+    image: bitnami/redis:6.2.9
+    ports:
+      - '6379:6379'
+    environment:
+      - REDIS_REPLICATION_MODE=master
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    volumes:
+      - /usr/local/redis-data:/bitnami/redis/data
+      - /usr/local/redis-conf/overrides.conf:/opt/bitnami/redis/mounted-etc/overrides.conf
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.labels.role==master]
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  redis-slave-node1:
+    image: bitnami/redis:6.2.9
+    ports:
+      - '6379'  
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PORT_NUMBER=6379
+      - ALLOW_EMPTY_PASSWORD=yes
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.labels.role==node]
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    depends_on:
+      - redis-master
