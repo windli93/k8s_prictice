@@ -1,0 +1,88 @@
+version: "2"
+
+services:
+  redis-node-0:
+    image: docker.io/bitnami/redis-cluster:6.2
+    ports:
+      - 7001:7001 # redis连接用端口
+      - 17001:17001 # redis之间消息连接的端口 默认是redis连接端口+10000
+    restart: always
+    environment:
+      - 'REDIS_CLUSTER_ANNOUNCE_IP=192.168.64.114' # 当前redis使用的静态IP(为了开放出来供外部使用这里写宿主机IP)
+      - 'REDIS_PORT_NUMBER=7001' # 替换原始6379端口
+      - 'REDIS_CLUSTER_DYNAMIC_IPS=no' # 标明不使用动态IP
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=192.168.64.114:7001 192.168.64.114:7002 192.168.64.114:7003 192.168.64.114:7004 192.168.64.114:7005 192.168.64.114:7006'
+
+  redis-node-1:
+    image: docker.io/bitnami/redis-cluster:6.2
+    ports:
+      - 7002:7002
+      - 17002:17002
+    restart: always
+    environment:
+      - 'REDIS_CLUSTER_ANNOUNCE_IP=192.168.64.114'
+      - 'REDIS_PORT_NUMBER=7002'
+      - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=192.168.64.114:7001 192.168.64.114:7002 192.168.64.114:7003 192.168.64.114:7004 192.168.64.114:7005 192.168.64.114:7006'
+
+  redis-node-2:
+    image: docker.io/bitnami/redis-cluster:6.2
+    ports:
+      - 7003:7003
+      - 17003:17003
+    restart: always
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_CLUSTER_ANNOUNCE_IP=192.168.64.114'
+      - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+      - 'REDIS_PORT_NUMBER=7003'
+      - 'REDIS_NODES=192.168.64.114:7001 192.168.64.114:7002 192.168.64.114:7003 192.168.64.114:7004 192.168.64.114:7005 192.168.64.114:7006'
+
+  redis-node-3:
+    image: docker.io/bitnami/redis-cluster:6.2
+    ports:
+      - 7004:7004
+      - 17004:17004
+    restart: always
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_CLUSTER_ANNOUNCE_IP=192.168.64.114'
+      - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+      - 'REDIS_PORT_NUMBER=7004'
+      - 'REDIS_NODES=192.168.64.114:7001 192.168.64.114:7002 192.168.64.114:7003 192.168.64.114:7004 192.168.64.114:7005 192.168.64.114:7006'
+
+  redis-node-4:
+    image: docker.io/bitnami/redis-cluster:6.2
+    ports:
+      - 7005:7005
+      - 17005:17005
+    restart: always
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_CLUSTER_ANNOUNCE_IP=192.168.64.114'
+      - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+      - 'REDIS_PORT_NUMBER=7005'
+      - 'REDIS_NODES=192.168.64.114:7001 192.168.64.114:7002 192.168.64.114:7003 192.168.64.114:7004 192.168.64.114:7005 192.168.64.114:7006'
+
+  redis-node-5:
+    image: docker.io/bitnami/redis-cluster:6.2
+    ports:
+      - 7006:7006
+      - 17006:17006
+    restart: always
+    depends_on:
+      - redis-node-0
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+      - redis-node-4
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_CLUSTER_ANNOUNCE_IP=192.168.64.114'
+      - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+      - 'REDIS_PORT_NUMBER=7006'
+      - 'REDIS_CLUSTER_REPLICAS=1'
+      - 'REDIS_NODES=192.168.64.114:7001 192.168.64.114:7002 192.168.64.114:7003 192.168.64.114:7004 192.168.64.114:7005 192.168.64.114:7006'
+      - 'REDIS_CLUSTER_CREATOR=yes'
